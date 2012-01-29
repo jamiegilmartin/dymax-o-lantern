@@ -1,0 +1,91 @@
+/*
+NOTES & LINKS for now
+
+https://github.com/asaeed/ThermoLamp/blob/master/Thermolamp/Thermolamp.pde
+
+pin arrangement mod from:
+http://allaboutee.com/2011/07/09/arduino-4-digit-7-segment-display-tutorial
+
+pic of display's pins
+http://www.pavius.net/2010/02/rotary-encoder-based-cooking-timer/
+
+
+7 segment display
+
+1: Digit 1						*d9 1k
+2: Digit 2						*d10 1k
+3: D							sr3
+4: Colon Anode					---
+5: E 							sr4
+6: Digit 3						*d11 1k
+7: Decimal Point				--- (sr7 no wire)
+8: Digit 4						d12 1k
+
+16: B							sr1
+15: G							sr6
+14: A							sr15
+13: C							sr2
+12: Colon Cathode				--- 
+11: F							sr5
+10: Apostrophe Anode			--- (add 5v 1k)
+9:  Apostrophe Cathode			--- (ground)
+
+* = PWM
+
+8 Bit Shift Register 74HC595
+http://www.sparkfun.com/products/733
+http://www.arduino.cc/en/Tutorial/ShiftOut
+
+ 1: display's B    16: 5V    
+ 2: display's C    15: display's A
+ 3: display's D    14: arduino's dataPin
+ 4: display's E    13: Gnd
+ 5: display's F    12: arduino's latchPin
+ 6: display's G    11: arduino's clockPin
+ 7: display's DP   10: 5V
+ 8: Gnd            9:  none
+/*
+DS (pin 14) to Ardunio DigitalPin 11 (blue wire)
+SH_CP (pin 11) to to Ardunio DigitalPin 12 (yellow wire)
+ST_CP (pin 12) to Ardunio DigitalPin 8 (green wire)
+*/
+
+//Thermistor
+http://arduino.cc/playground/ComponentLib/Thermistor2
+
+============================================================
+ (Ground) ---- (10k-Resister) -------|------- (Thermistor) ---- (+5v)
+                                     |
+                                Analog Pin 0
+
+
+//Photoresistor
+http://www.arduino.cc/playground/Learning/PhotoResistor
+
+----------------------------------------------------
+
+           PhotoR     10K
+ +5    o---/\/\/--.--/\/\/---o GND
+                  |
+ Pin 0 o-----------
+
+----------------------------------------------------
+
+
+//TRI COLOR LED
+http://www.sparkfun.com/products/9264
+http://wiring.org.co/learning/basics/rgbled.html
+
+1 = red
+2 = ground
+3 = green
+4 = blue
+1 2 3 4
+| | | |
+| | | |
+| | | 
+  | |
+  |
+
+
+*/

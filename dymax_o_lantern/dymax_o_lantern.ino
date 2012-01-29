@@ -1,147 +1,33 @@
-//http://arduino.cc/playground/ComponentLib/Thermistor2
-//https://github.com/asaeed/ThermoLamp/blob/master/Thermolamp/Thermolamp.pde
-//http://www.instructables.com/id/4-Digit-7-Segment-LED-Display-Arduino/
-//http://allaboutee.com/2011/07/09/arduino-4-digit-7-segment-display-tutorial/
-
-/*
-pin arrangement mod from:
-//http://allaboutee.com/2011/07/09/arduino-4-digit-7-segment-display-tutorial
-
-pic of display's pins
-//http://www.pavius.net/2010/02/rotary-encoder-based-cooking-timer/
-
-1: Digit 1						*d9 1k
-2: Digit 2						*d10 1k
-3: D							*d5
-4: Colon Anode					--- (5v 1k - took out, don't need)
-5: E 							*d6
-6: Digit 3						d11 1k
-7: Decimal Point				---
-8: Digit 4						d12 1k
-
-16: B							*d3
-15: G							d8
-14: A							d2
-13: C							d4
-12: Colon Cathode				--- (ground - took out, don't need)
-11: F							d7
-10: Apostrophe Anode			--- (add 5v 1k)
-9:  Apostrophe Cathode			--- (ground)
-
-*pwm
-
-//now with shift register
-
-1: Digit 1						*d9 1k
-2: Digit 2						*d10 1k
-3: D							sr
-4: Colon Anode					---
-5: E 							sr
-6: Digit 3						d11 1k
-7: Decimal Point				---
-8: Digit 4						d12 1k
-
-16: B							sr
-15: G							sr
-14: A							sr
-13: C							sr
-12: Colon Cathode				--- 
-11: F							sr
-10: Apostrophe Anode			--- (add 5v 1k)
-9:  Apostrophe Cathode			--- (ground)
-
-8 Bit Shift Register
-
- 1: display's B    16: 5V    
- 2: display's C    15: display's A
- 3: display's D    14: arduino's dataPin
- 4: display's E    13: Gnd
- 5: display's F    12: arduino's latchPin
- 6: display's G    11: arduino's clockPin
- 7: display's DP   10: 5V
- 8: Gnd            9:  none
-
-
-//Thermistor
-
-============================================================
- (Ground) ---- (10k-Resister) -------|------- (Thermistor) ---- (+5v)
-                                     |
-                                Analog Pin 0
-
-
-//photoresistor
-----------------------------------------------------
-
-           PhotoR     10K
- +5    o---/\/\/--.--/\/\/---o GND
-                  |
- Pin 0 o-----------
-
-----------------------------------------------------
-
-
-//LED
-
-
-1 2 3 4
-| | | |
-| | | |
-| | | 
-  | |
-  |
-
-1 = red
-2 = ground
-3 = green
-4 = blue
-
-*/
-
-
+//TODO:
+//smooth readings
+//slow down readings
+//add btn to switch F to C vice versa
+//PWM brightness on digits 2 - 4, reverse of LED
+//abstraction
 
 #include <math.h>
 
 
-int thermistor = 0;
-int photoresistor = 1;
-int redPin = 11;    // RED pin of the LED to PWM
-int greenPin = 10;  // GREEN pin of the LED to PWM
-int bluePin = 9;   // BLUE pin of the LED to PWM
+const int thermistor = 0;
+const int photoresistor = 1;
+const int redPin = 11;    // RED pin of the LED to PWM
+const int greenPin = 10;  // GREEN pin of the LED to PWM
+const int bluePin = 9;   // BLUE pin of the LED to PWM
 
 //7 segment display
-int digit1 = 2, digit2 = 3, digit3 = 5, digit4 = 6;
-
-/*
-int A = 2;
-int B = 3;
-int C = 4;
-int D = 5;
-int E = 6;
-int F = 7;
-int G = 8;
-*/
+const int digit1 = 2, digit2 = 3, digit3 = 5, digit4 = 6;
 
 byte dataArray[13];
 const int MINUS_IDX = 10;
 const int CELCIUS_IDX = 11;
 const int FARENHEIT_IDX = 12;
 
-int segmentDelay = 5;
+const int segmentDelay = 5;
 
-//shift register 74HC595 - http://www.sparkfun.com/products/733
-//shift out
-/*
-DS (pin 14) to Ardunio DigitalPin 11 (blue wire)
-SH_CP (pin 11) to to Ardunio DigitalPin 12 (yellow wire)
-ST_CP (pin 12) to Ardunio DigitalPin 8 (green wire)
-*/
-//Pin connected to latch pin (ST_CP) of 74HC595
-const int latchPin = 8;
-//Pin connected to clock pin (SH_CP) of 74HC595
-const int clockPin = 12;
-////Pin connected to Data in (DS) of 74HC595
-const int dataPin = 7;
+//shift register 74HC595
+const int latchPin = 8; //Pin connected to latch pin (ST_CP) of 74HC595
+const int clockPin = 12; //Pin connected to clock pin (SH_CP) of 74HC595
+const int dataPin = 7; //Pin connected to Data in (DS) of 74HC595
 
 
 int i = 0;
@@ -155,22 +41,14 @@ void setup() {
 	pinMode(redPin, OUTPUT); 
 	pinMode(greenPin, OUTPUT); 
 	pinMode(bluePin, OUTPUT);
+	pinMode(thermistor, INPUT);
 	pinMode(photoresistor, INPUT);
-	//pinMode(motor, OUTPUT); 
 	
 	pinMode(digit1, OUTPUT);
 	pinMode(digit2, OUTPUT);
 	pinMode(digit3, OUTPUT);
 	pinMode(digit4, OUTPUT);
-	/*
-	pinMode(A,OUTPUT);
-	pinMode(B,OUTPUT);
-	pinMode(C,OUTPUT);
-	pinMode(D,OUTPUT);
-	pinMode(E,OUTPUT);
-	pinMode(F,OUTPUT);
-	pinMode(G,OUTPUT);
-	*/
+
 	//      A
 	//    F   B
 	//      G
@@ -207,11 +85,6 @@ void loop() {
 	int temp = int(Thermistor(analogRead(thermistor)));
 	tempLightGuage();
 
-	//Serial.println("temperature:");
-	//Serial.print(temp);  // display Celsius
-	//Serial.print(" C | ");
-	//Serial.println(currentTime);
-
 	/* temp 
 	if(currentTime % 2){
 		displayTemperature(temp, CELCIUS_IDX);
@@ -221,7 +94,6 @@ void loop() {
 	displayTemperature((temp * 9.0)/ 5.0 + 32.0, FARENHEIT_IDX);
 }
 
-//http://arduino.cc/playground/ComponentLib/Thermistor2
 double Thermistor(int RawADC) {
 	double Temp;
 	Temp = log(((10240000/RawADC) - 10000));
@@ -239,7 +111,6 @@ void displayTemperature(int temp, char unit){
 		}else{
 			dd(2);
 		}
-		//sl('-');
 		sn(MINUS_IDX);
 		delay(segmentDelay);
 		//set temp to positive int
@@ -290,12 +161,13 @@ void displayTemperature(int temp, char unit){
 	}
 	
 	dd(4);
-	//sl(unit);
 	sn(unit);
 	delay(segmentDelay);
 }
 
 void tempLightGuage(){
+	//TODO: change to celsius
+	
 	//gauged arbitrarily in fahrenheit
 	int tempF = (int(Thermistor(analogRead(thermistor))) * 9.0)/ 5.0 + 32.0;
 	int photoResistance = analogRead(photoresistor);
