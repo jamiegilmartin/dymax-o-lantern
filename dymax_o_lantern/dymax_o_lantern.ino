@@ -1,39 +1,55 @@
+//
+//  dymax_o_lantern.ino
+//
+//  Created by jamie gilmartin on 2012-01-29.
+//  Copyright (c) 2012 jamiegilmartin. All rights reserved.
+//
+
+//mucho help from ahmad's thermo lamp code
+//https://github.com/asaeed/ThermoLamp/blob/master/Thermolamp/Thermolamp.pde
+
 //TODO:
-//smooth readings
-//slow down readings
-//add btn to switch F to C vice versa
 //PWM brightness on digits 2 - 4, reverse of LED
 //abstraction
 
 #include <math.h>
 
-
 const int thermistor = 0;
 const int photoresistor = 1;
+const int buttonPin = 13;
 const int redPin = 11;    // RED pin of the LED to PWM
 const int greenPin = 10;  // GREEN pin of the LED to PWM
 const int bluePin = 9;   // BLUE pin of the LED to PWM
 
 //7 segment display
-const int digit1 = 2, digit2 = 3, digit3 = 5, digit4 = 6;
-
-byte dataArray[13];
-const int MINUS_IDX = 10;
-const int CELCIUS_IDX = 11;
-const int FARENHEIT_IDX = 12;
-
-const int segmentDelay = 5;
+const int digit1 = 2;
+const int digit2 = 3;
+const int digit3 = 5;
+const int digit4 = 6;
 
 //shift register 74HC595
 const int latchPin = 8; //Pin connected to latch pin (ST_CP) of 74HC595
 const int clockPin = 12; //Pin connected to clock pin (SH_CP) of 74HC595
 const int dataPin = 7; //Pin connected to Data in (DS) of 74HC595
 
+int buttonValue = 0;
+unsigned long buttonStartTime = 0;
+unsigned long buttonTime = 0;
+boolean buttonPressed = false;
+boolean buttonLongPressed = false;
+char scale = 'C';
 
-int i = 0;
+byte dataArray[13];  //segments in binary
+const int MINUS_IDX = 10;
+const int CELCIUS_IDX = 11;
+const int FARENHEIT_IDX = 12;
+
+const int segmentDelay = 5; //millisecond pulse btwn digit display
+
 unsigned long currentTime = 0;
+unsigned long prevTempTime = 0;
 
-
+int temperature = 0; //initially in celsius
 
 void setup() {
 	Serial.begin(9600);
@@ -48,7 +64,11 @@ void setup() {
 	pinMode(digit2, OUTPUT);
 	pinMode(digit3, OUTPUT);
 	pinMode(digit4, OUTPUT);
-
+	
+	pinMode(latchPin, OUTPUT);
+	pinMode(clockPin, OUTPUT);
+	pinMode(dataPin, OUTPUT);
+	
 	//      A
 	//    F   B
 	//      G
@@ -74,24 +94,56 @@ void setup() {
 	dataArray[FARENHEIT_IDX] = B10001110;  // F
 	
 	
-	pinMode(latchPin, OUTPUT);
-	pinMode(clockPin, OUTPUT);
-	pinMode(dataPin, OUTPUT);
+
 }
 
 void loop() {
-	currentTime = millis() / 1000;
+	currentTime = millis();
+	buttonValue = digitalRead(buttonPin);
 	
-	int temp = int(Thermistor(analogRead(thermistor)));
-	tempLightGuage();
+	if (buttonValue == 1){
+		if (buttonPressed == false) {
+			buttonPressed = true;
+			buttonStartTime = currentTime; 
+		} else {
+			buttonTime = currentTime - buttonStartTime; 
+			if (buttonTime > 1500) {
+				buttonPressed = false;
+				buttonLongPressed = true;
+				buttonTime = 0;
+				//longPressEvent();
+				//do something cool here like hello world display
+			}
+		} 
 
-	/* temp 
-	if(currentTime % 2){
-		displayTemperature(temp, CELCIUS_IDX);
-	}else{
-		displayTemperature((temp * 9.0)/ 5.0 + 32.0, FARENHEIT_IDX);
-	}*/
-	displayTemperature((temp * 9.0)/ 5.0 + 32.0, FARENHEIT_IDX);
+	} else {
+		if (buttonPressed == true){
+			buttonPressed = false;
+			if (buttonLongPressed) {
+				buttonLongPressed = false;
+			} else if (buttonTime < 1500) {
+				changeScale();
+			}
+		} 
+	}
+	
+	
+	if(currentTime < 5){
+		temperature = int(Thermistor(analogRead(thermistor)));
+	}
+	
+	//every 10 seconds, refresh the temp reading
+	if (prevTempTime + 10000 < currentTime || prevTempTime == 0){
+		//Serial.println(currentTime);
+		temperature = int(Thermistor(analogRead(thermistor)));
+		
+		prevTempTime = currentTime;
+	}
+	
+	displayTemperature(temperature);
+	tempLightGuage(temperature);
+
+	
 }
 
 double Thermistor(int RawADC) {
@@ -100,10 +152,26 @@ double Thermistor(int RawADC) {
 	Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
 	Temp = Temp - 273.15;            // Convert Kelvin to Celsius
 	//Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit
-	return Temp;
+	return Temp; //return Celsius
 }
 
-void displayTemperature(int temp, char unit){
+void changeScale(){
+	if (scale == 'C') {
+		scale = 'F';
+	} else {
+		scale = 'C';
+	}
+}
+
+void displayTemperature(int temp){
+	int unit;
+	if (scale == 'C') {
+		unit = CELCIUS_IDX;
+	} else {
+		unit = FARENHEIT_IDX;
+		temp = (temp * 9.0)/ 5.0 + 32.0; 
+	}
+	
 	//if temp is negative, set negitive sign to correct digit
 	if(temp < 0){
 		if(temp < -9){
@@ -161,18 +229,20 @@ void displayTemperature(int temp, char unit){
 	}
 	
 	dd(4);
+	
 	sn(unit);
+
 	delay(segmentDelay);
 }
 
-void tempLightGuage(){
-	//TODO: change to celsius
+void tempLightGuage(int temp){
+	//TODO: change to celsius 
+	//http://www.digikey.com/us/en/techzone/lighting/resources/articles/mcus-tune-led-color-via-algorithms.html?WT.z_sm_link=google+_tz_0124_lighting
 	
 	//gauged arbitrarily in fahrenheit
-	int tempF = (int(Thermistor(analogRead(thermistor))) * 9.0)/ 5.0 + 32.0;
+	int tempF = (temp * 9.0)/ 5.0 + 32.0;
 	int photoResistance = analogRead(photoresistor);
 	//Serial.println("temp");
-	//Serial.println(tempF);  // display Fahrenheit
 	//Serial.println("photoresistance");
 	//Serial.println(photoResistance); 
 
