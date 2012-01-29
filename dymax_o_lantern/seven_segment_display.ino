@@ -41,9 +41,19 @@ void dd(int num){
 //      D   dp (H)
 // LOW == on
 // HIGH == off
-
+void sn(int num){
+	// take the latchPin low so 
+	// the LEDs don't change while you're sending in bits:
+	digitalWrite(latchPin, LOW);
+	// shift out the bits:
+	shiftOut(dataPin, clockPin, MSBFIRST, dataArray[num]);  
+	//take the latch pin high so the LEDs will light up:
+	digitalWrite(latchPin, HIGH);
+}
+/*
 //segment numbers
 void sn(int num){
+
 	
 	switch(num){
 		case 0:
@@ -285,6 +295,6 @@ void sl(char let){
 		break;
 	}
 }
-
+*/
 
 
