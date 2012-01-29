@@ -97,6 +97,7 @@ void setup() {
 
 }
 
+
 void loop() {
 	currentTime = millis();
 	buttonValue = digitalRead(buttonPin);
@@ -143,7 +144,6 @@ void loop() {
 	displayTemperature(temperature);
 	tempLightGuage(temperature);
 
-	
 }
 
 double Thermistor(int RawADC) {
@@ -236,11 +236,10 @@ void displayTemperature(int temp){
 }
 
 void tempLightGuage(int temp){
-	//TODO: change to celsius 
 	//http://www.digikey.com/us/en/techzone/lighting/resources/articles/mcus-tune-led-color-via-algorithms.html?WT.z_sm_link=google+_tz_0124_lighting
 	
-	//gauged arbitrarily in fahrenheit
-	int tempF = (temp * 9.0)/ 5.0 + 32.0;
+	//TODO: better colors & prop temping 16-20
+
 	int photoResistance = analogRead(photoresistor);
 	//Serial.println("temp");
 	//Serial.println("photoresistance");
@@ -250,28 +249,28 @@ void tempLightGuage(int temp){
 	int brightness = map(photoResistance,0,1023,50,0); //0-255
 	//Serial.println("brightness");
 	//Serial.println(brightness); 
-	int tLow = 60;
-	int tHigh = 90;
-	int tIdeal = 72;
-	int justRightRange = 5;
-	int cool = map( tempF, (tIdeal-justRightRange), tIdeal, 0, brightness );
-	int warm = map( tempF, tIdeal, (tIdeal+justRightRange), 0, brightness ); 
-	int tooCold =  map(tempF, tHigh, tLow, 0, brightness );
-	int tooHot = map(tempF, tLow, tHigh, 0, brightness );
+	int tLow = 15;
+	int tHigh = 25;
+	int tIdeal = 20;
+	int justRightRange = 2;
+	int cool = map( temp, (tIdeal-justRightRange), tIdeal, 0, brightness );
+	int warm = map( temp, tIdeal, (tIdeal+justRightRange), 0, brightness ); 
+	int cold =  map(temp, tHigh, tLow, 0, brightness );
+	int hot = map(temp, tLow, tHigh, 0, brightness );
 
-	if(tempF == tIdeal){
+	if(temp == tIdeal){
 		analogWrite(greenPin, brightness);
 		analogWrite(redPin, 0);
 		analogWrite(bluePin, 0);
 		//Serial.println("tIdeal");
-	}else if(tempF < tLow){
-		//bottom out
+	}else if(temp < tLow){
+		//bottom out - too cold
 		analogWrite(greenPin, 0);
 		analogWrite(redPin, 0);
 		analogWrite(bluePin, brightness);
 		//Serial.println("bottom out");
-	}else if(tempF > tHigh){
-		//top out
+	}else if(temp > tHigh){
+		//top out - too high
 		analogWrite(greenPin, 0);
 		analogWrite(redPin, brightness);
 		analogWrite(bluePin, 0);
@@ -279,19 +278,24 @@ void tempLightGuage(int temp){
 	}else{
 
 		//ok range
-		if(tempF > (tIdeal-justRightRange) && tempF < tIdeal ){
+		if(temp > (tIdeal-justRightRange) && temp < tIdeal ){
 			analogWrite(greenPin, cool);
+			//analogWrite(redPin, 0);
+			//analogWrite(bluePin, cold/2);
 			//Serial.println("cool");
-		}else if(tempF < (tIdeal+justRightRange) && tempF > tIdeal){
+		}else if(temp < (tIdeal+justRightRange) && temp > tIdeal){
 			analogWrite(greenPin, warm);
+			//analogWrite(redPin, hot/2);
+			//analogWrite(bluePin, 0);
 			//Serial.println("warm");
 		}else{
 			analogWrite(greenPin, 0);
+			//hot and cold going
+			analogWrite(redPin, hot);
+			analogWrite(bluePin, cold);
 		}
 
-		//hot and cold going
-		analogWrite(redPin, tooHot);
-		analogWrite(bluePin, tooCold); 
+		
 	}
 
 }
