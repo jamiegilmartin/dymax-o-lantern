@@ -49,7 +49,7 @@ const int segmentDelay = 5; //millisecond pulse btwn digit display
 unsigned long currentTime = 0;
 unsigned long prevTempTime = 0;
 
-int temperature = 0; //initially in celsius
+int temperature = 0;
 
 void setup() {
 	Serial.begin(9600);
@@ -113,7 +113,7 @@ void loop() {
 				buttonLongPressed = true;
 				buttonTime = 0;
 				//longPressEvent();
-				//do something cool here like hello world display
+				//do something cool here with display
 			}
 		} 
 
@@ -135,24 +135,28 @@ void loop() {
 	
 	//every 10 seconds, refresh the temp reading
 	if (prevTempTime + 10000 < currentTime || prevTempTime == 0){
-		//Serial.println(currentTime);
 		temperature = int(Thermistor(analogRead(thermistor)));
-		
 		prevTempTime = currentTime;
 	}
 	
+
 	displayTemperature(temperature);
 	tempLightGuage(temperature);
-
+	
 }
 
 double Thermistor(int RawADC) {
-	double Temp;
+	double Temp, TempC, TempF;
 	Temp = log(((10240000/RawADC) - 10000));
 	Temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * Temp * Temp ))* Temp );
-	Temp = Temp - 273.15;            // Convert Kelvin to Celsius
-	//Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit
-	return Temp; //return Celsius
+	TempC = Temp - 273.15;            // Convert Kelvin to Celsius
+	TempF = (TempC * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit
+	
+	if (scale == 'C') {
+		return TempC;;
+	} else {
+		return TempF;;
+	}
 }
 
 void changeScale(){
@@ -161,6 +165,7 @@ void changeScale(){
 	} else {
 		scale = 'C';
 	}
+	temperature = int(Thermistor(analogRead(thermistor)));
 }
 
 void displayTemperature(int temp){
@@ -169,7 +174,6 @@ void displayTemperature(int temp){
 		unit = CELCIUS_IDX;
 	} else {
 		unit = FARENHEIT_IDX;
-		temp = (temp * 9.0)/ 5.0 + 32.0; 
 	}
 	
 	//if temp is negative, set negitive sign to correct digit
@@ -236,23 +240,26 @@ void displayTemperature(int temp){
 }
 
 void tempLightGuage(int temp){
-	//http://www.digikey.com/us/en/techzone/lighting/resources/articles/mcus-tune-led-color-via-algorithms.html?WT.z_sm_link=google+_tz_0124_lighting
-	
-	//TODO: better colors & prop temping 16-20
-
 	int photoResistance = analogRead(photoresistor);
-	//Serial.println("temp");
-	//Serial.println("photoresistance");
-	//Serial.println(photoResistance); 
+	int brightness = map(photoResistance,0,1023,0,255);
 
-
-	int brightness = map(photoResistance,0,1023,50,0); //0-255
-	//Serial.println("brightness");
-	//Serial.println(brightness); 
-	int tLow = 15;
-	int tHigh = 25;
-	int tIdeal = 20;
-	int justRightRange = 2;
+	//these values are arbitrary and the conversion could be more elegant
+	int tLow;
+	int tHigh;
+	int tIdeal;
+	int justRightRange;
+	if (scale == 'C') {
+		tLow = 10;
+		tHigh = 32;
+		tIdeal = 21;
+		justRightRange = 2;
+	} else {
+		tLow = 50;
+		tHigh = 90;
+		tIdeal = 70;
+		justRightRange = 5;
+	}
+	
 	int cool = map( temp, (tIdeal-justRightRange), tIdeal, 0, brightness );
 	int warm = map( temp, tIdeal, (tIdeal+justRightRange), 0, brightness ); 
 	int cold =  map(temp, tHigh, tLow, 0, brightness );
@@ -262,40 +269,30 @@ void tempLightGuage(int temp){
 		analogWrite(greenPin, brightness);
 		analogWrite(redPin, 0);
 		analogWrite(bluePin, 0);
-		//Serial.println("tIdeal");
 	}else if(temp < tLow){
 		//bottom out - too cold
 		analogWrite(greenPin, 0);
 		analogWrite(redPin, 0);
 		analogWrite(bluePin, brightness);
-		//Serial.println("bottom out");
 	}else if(temp > tHigh){
-		//top out - too high
+		//top out - too hot
 		analogWrite(greenPin, 0);
 		analogWrite(redPin, brightness);
 		analogWrite(bluePin, 0);
-		//Serial.println("top out");
 	}else{
-
+		
 		//ok range
 		if(temp > (tIdeal-justRightRange) && temp < tIdeal ){
 			analogWrite(greenPin, cool);
-			//analogWrite(redPin, 0);
-			//analogWrite(bluePin, cold/2);
-			//Serial.println("cool");
 		}else if(temp < (tIdeal+justRightRange) && temp > tIdeal){
 			analogWrite(greenPin, warm);
-			//analogWrite(redPin, hot/2);
-			//analogWrite(bluePin, 0);
-			//Serial.println("warm");
 		}else{
 			analogWrite(greenPin, 0);
-			//hot and cold going
-			analogWrite(redPin, hot);
-			analogWrite(bluePin, cold);
 		}
-
 		
+	//hot and cold going
+	analogWrite(redPin, hot);
+	analogWrite(bluePin, cold);	
 	}
 
 }
