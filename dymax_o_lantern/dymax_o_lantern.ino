@@ -37,7 +37,7 @@ unsigned long buttonStartTime = 0;
 unsigned long buttonTime = 0;
 boolean buttonPressed = false;
 boolean buttonLongPressed = false;
-char scale = 'C';
+char scale = 'C'; //C or F
 
 byte dataArray[13];  //segments in binary
 const int MINUS_IDX = 10;
@@ -48,6 +48,13 @@ const int segmentDelay = 5; //millisecond pulse btwn digit display
 
 unsigned long currentTime = 0;
 unsigned long prevTempTime = 0;
+
+int photoResistance = 0;
+int dim = 10;
+int bright = 255;
+int lightMode = dim;
+char dimmer = 'D'; //named after variables above - D & B
+int brightness = 0;
 
 int temperature = 0;
 
@@ -97,9 +104,12 @@ void setup() {
 
 }
 
-
 void loop() {
 	currentTime = millis();
+	
+	photoResistance = analogRead(photoresistor);
+	brightness = map(photoResistance,0,1023,0,lightMode);
+	
 	buttonValue = digitalRead(buttonPin);
 	
 	if (buttonValue == 1){
@@ -112,8 +122,7 @@ void loop() {
 				buttonPressed = false;
 				buttonLongPressed = true;
 				buttonTime = 0;
-				//longPressEvent();
-				//do something cool here with display
+				changeBrightness();
 			}
 		} 
 
@@ -166,6 +175,18 @@ void changeScale(){
 		scale = 'C';
 	}
 	temperature = int(Thermistor(analogRead(thermistor)));
+}
+
+void changeBrightness(){
+	if (dimmer == 'D') {
+		dimmer = 'B';
+		lightMode = bright;
+	} else {
+		dimmer = 'D';
+		lightMode = dim;
+	}
+	
+	brightness = map(photoResistance,0,1023,0,lightMode);
 }
 
 void displayTemperature(int temp){
@@ -240,9 +261,7 @@ void displayTemperature(int temp){
 }
 
 void tempLightGuage(int temp){
-	int photoResistance = analogRead(photoresistor);
-	int brightness = map(photoResistance,0,1023,0,255);
-
+	
 	//these values are arbitrary and the conversion could be more elegant
 	int tLow;
 	int tHigh;
@@ -294,5 +313,4 @@ void tempLightGuage(int temp){
 	analogWrite(redPin, hot);
 	analogWrite(bluePin, cold);	
 	}
-
 }
